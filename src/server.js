@@ -1,7 +1,8 @@
 import app from './app';
 import http from 'http';
-import settings from './settings';
-import io from './io';
+import settings from './lib/settings';
+import io from './lib/io';
+import mdns from 'mdns';
 
 let debug = require('debug')('bekant:server');
 let config = settings.get('server');
@@ -64,6 +65,13 @@ function onListening() {
         ? 'pipe ' + addr
         : 'port ' + addr.port;
     debug('Listening on ' + bind);
+
+    // advertise via bonjour
+    let ad = mdns.createAdvertisement(mdns.tcp('http'), addr.port, { txtRecord: {
+        name: 'bekant'
+    }});
+
+    ad.start();
 }
 
 let port = normalizePort(config.port || '3000');

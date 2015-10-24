@@ -10,16 +10,20 @@ var _http = require('http');
 
 var _http2 = _interopRequireDefault(_http);
 
-var _settings = require('./settings');
+var _libSettings = require('./lib/settings');
 
-var _settings2 = _interopRequireDefault(_settings);
+var _libSettings2 = _interopRequireDefault(_libSettings);
 
-var _io = require('./io');
+var _libIo = require('./lib/io');
 
-var _io2 = _interopRequireDefault(_io);
+var _libIo2 = _interopRequireDefault(_libIo);
+
+var _mdns = require('mdns');
+
+var _mdns2 = _interopRequireDefault(_mdns);
 
 var debug = require('debug')('bekant:server');
-var config = _settings2['default'].get('server');
+var config = _libSettings2['default'].get('server');
 
 /**
  * Normalize a port into a number, string, or false.
@@ -75,6 +79,13 @@ function onListening() {
     var addr = server.address();
     var bind = typeof addr === 'string' ? 'pipe ' + addr : 'port ' + addr.port;
     debug('Listening on ' + bind);
+
+    // advertise via bonjour
+    var ad = _mdns2['default'].createAdvertisement(_mdns2['default'].tcp('http'), addr.port, { txtRecord: {
+            name: 'bekant'
+        } });
+
+    ad.start();
 }
 
 var port = normalizePort(config.port || '3000');
@@ -86,7 +97,7 @@ _app2['default'].set('port', port);
 var server = _http2['default'].createServer(_app2['default']);
 
 // setup socket.io
-(0, _io2['default'])(server);
+(0, _libIo2['default'])(server);
 
 // listen on provided port
 server.listen(port, config.host || '0.0.0.0');

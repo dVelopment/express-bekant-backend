@@ -4,14 +4,16 @@ var favicon = require('serve-favicon');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
-import settings from './settings';
-import session from './session';
-import auth from './authentication';
-import router from './router';
+import settings from './lib/settings';
+import session from './lib/session';
+import auth from './lib/authentication';
+import router from './lib/router';
+import cors from 'cors';
 
 var app = express();
 
 app.use(session.session);
+app.use(cors());
 
 // uncomment after placing your favicon in /public
 //app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
@@ -22,7 +24,8 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // configure authentication
-auth(app);
+auth.init(app);
+app.use('/auth', auth.router);
 
 // setup routes
 router(app);

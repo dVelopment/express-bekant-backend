@@ -19,6 +19,7 @@ var _settings = require('./settings');
 var _settings2 = _interopRequireDefault(_settings);
 
 var config = _settings2['default'].get('authentication');
+var initialized = false;
 
 function setupLocalAuthentication() {}
 
@@ -35,12 +36,33 @@ function setupStrategies() {
     });
 }
 
-function init(app) {
-    setupStrategies();
-
-    app.use(_passport2['default'].initialize());
-    app.use(_passport2['default'].session());
+/**
+ * authentication middleware
+ *
+ * @param req
+ * @param res
+ * @param next
+ */
+function auth(req, res, next) {
+    if (!req.isAuthenticated()) {
+        res.send(401);
+    } else {
+        next();
+    }
 }
 
-exports['default'] = init;
+function init(app) {
+    if (initialized === false) {
+        setupStrategies();
+
+        app.use(_passport2['default'].initialize());
+        app.use(_passport2['default'].session());
+        initialized = true;
+    }
+}
+
+exports['default'] = {
+    init: init,
+    auth: auth
+};
 module.exports = exports['default'];

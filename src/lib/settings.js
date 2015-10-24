@@ -1,6 +1,6 @@
 'use strict';
 
-let settings = require('../settings.json');
+let settings = require('../../settings.json');
 
 function getSetting(key, required = true) {
     if (settings.hasOwnProperty(key)) {

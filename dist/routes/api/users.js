@@ -10,13 +10,12 @@ var _express = require('express');
 
 var _express2 = _interopRequireDefault(_express);
 
-var _users = require('./users');
+var _libUserManager = require('../../lib/userManager');
 
-var _users2 = _interopRequireDefault(_users);
+var _libUserManager2 = _interopRequireDefault(_libUserManager);
 
 var router = _express2['default'].Router();
-
-router.use('/users', _users2['default']);
+var manager = new _libUserManager2['default']();
 
 exports['default'] = router;
 module.exports = exports['default'];

@@ -5,7 +5,40 @@ var gulp = require('gulp'),
     watch = require('gulp-watch'),
     spawn = require('child_process').spawn,
     config = require('./config'),
+    fs = require('fs'),
+    path = require('path'),
+    _ = require('lodash'),
     node;
+
+gulp.task('npm', function (done) {
+    fs.exists(path.join(__dirname, '../settings.json'), function (exists) {
+        if (!exists) {
+            return done();
+        }
+
+        // install passport providers
+        var settings = require('../settings.json');
+
+        if (!settings.authentication || !settings.authentication.providers) {
+            return done();
+        }
+
+        var providers = [];
+
+        _.forEach(settings.authentication.providers, function(conf, provider) {
+            providers.push('passport-' + provider);
+        });
+
+        if (!providers.length) {
+            return done();
+        }
+
+        var proc = spawn('npm', ['install'].concat(providers), {stdio: 'inherit'});
+        proc.on('close', function (code) {
+            done();
+        });
+    });
+});
 
 gulp.task('scripts', function () {
     return gulp.src(config.scriptBase + '/**/*.js')
@@ -36,7 +69,7 @@ gulp.task('watch', ['server'], function () {
     });
 });
 
-gulp.task('build', ['scripts', 'views']);
+gulp.task('build', ['scripts', 'views', 'npm']);
 
 // cleanup on exit
 function exitHandler(options, err) {
