@@ -1,0 +1,9 @@
+db:
+    image: mongo:3
+    ports:
+        - 27017:27017
+
+session:
+    image: redis:2.6
+    ports:
+        - 6379:6379
