@@ -5,8 +5,13 @@ import passportSocketIo from 'passport.socketio';
 import session from './session';
 import settings from './settings';
 import cookieParser from 'cookie-parser';
+import _ from 'lodash';
+import Socket from './socket';
 
-let io;
+let io, promise;
+
+let listeners = [];
+let sockets = [];
 
 function onAuthorizeSuccess(data, accept){
     console.log('successful connection to socket.io');
@@ -24,19 +29,42 @@ function init(server) {
         throw new Error('io.init already called');
     }
 
-    io = socketIo(server);
+    promise = new Promise((resolve) => {
+        io = socketIo(server);
 
-    io.use(passportSocketIo.authorize({
-        cookieParser: cookieParser,
-        secret: settings.get('session').secret,
-        store: session.store,
-        success: onAuthorizeSuccess,
-        fail: onAuthorizeFail
-    }));
+        io.use(passportSocketIo.authorize({
+            cookieParser: cookieParser,
+            secret: settings.get('session').secret,
+            store: session.store,
+            success: onAuthorizeSuccess,
+            fail: onAuthorizeFail
+        }));
 
-    io.sockets.on('connection', function(socket) {
-        console.log(socket.request.user);
+        io.sockets.on('connection', function(socket) {
+            let tmp = new Socket(socket);
+            sockets.push(tmp);
+            socket.on('disconnect', () => {
+                _.remove(sockets, tmp);
+            });
+        });
+
+        resolve(io);
+
+        _.forEach(listeners, (l) => l(io));
     });
 }
 
-export default init;
+function getIo() {
+    if (!promise) {
+        return new Promise((resolve) => {
+            listeners.push(resolve);
+        });
+    } else {
+        return promise;
+    }
+}
+
+export default {
+    init: init,
+    io: getIo
+};

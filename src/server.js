@@ -60,16 +60,21 @@ function onError(error) {
  */
 
 function onListening() {
-    var addr = server.address();
+    var addr = this.address();
     var bind = typeof addr === 'string'
         ? 'pipe ' + addr
         : 'port ' + addr.port;
     debug('Listening on ' + bind);
 
+    let name = config.name || 'bekant';
+
     // advertise via bonjour
-    let ad = mdns.createAdvertisement(mdns.tcp('http'), addr.port, { txtRecord: {
-        name: 'bekant'
-    }});
+    let ad = mdns.createAdvertisement(mdns.tcp('bekant'), addr.port, {
+        txtRecord: {
+            name: name
+        },
+        name: name
+    });
 
     ad.start();
 }
@@ -83,7 +88,7 @@ app.set('port', port);
 let server = http.createServer(app);
 
 // setup socket.io
-io(server);
+io.init(server);
 
 // listen on provided port
 server.listen(port, config.host || '0.0.0.0');

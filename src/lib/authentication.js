@@ -34,7 +34,7 @@ function setupLocalAuthentication() {
                     return done(null, false, {message: 'Incorrect password.'});
                 }
 
-                return done(null, user);
+                return done(null, getUserData(user));
             }, (err) => {
                 return done(err);
             });
@@ -42,10 +42,10 @@ function setupLocalAuthentication() {
     ));
 
     // setup routes
-    router.post('/login', passport.authenticate('local'), (req, res) => {
+    router.post('/local/login', passport.authenticate('local'), (req, res) => {
         res.send(req.user);
     });
-    router.post('/signup', (req, res) => {
+    router.post('/local/signup', (req, res) => {
         function success(user) {
             res.json(getUserData(user));
         }
@@ -147,7 +147,8 @@ function init(app) {
             manager.findById(id).then((user) => {
                 done(null, user);
             }, (err) => {
-                done(err);
+                console.log('error deserializing user', err);
+                done(null, null);
             });
         });
     }

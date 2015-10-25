@@ -47,7 +47,11 @@ var UserManager = (function () {
 
             return this.db.ready().then(function () {
                 return _this.db.findOne('users', { username: username }).then(function (data) {
-                    return new _modelUser2['default'](data);
+                    if (data) {
+                        return new _modelUser2['default'](data);
+                    } else {
+                        return null;
+                    }
                 });
             });
         }
@@ -68,6 +72,10 @@ var UserManager = (function () {
             var _this2 = this;
 
             return new Promise(function (resolve, reject) {
+                if (!user.apiKey) {
+                    user.apiKey = user.createApiKey();
+                }
+
                 var data = _lodash2['default'].assign({}, user);
 
                 delete data._id;

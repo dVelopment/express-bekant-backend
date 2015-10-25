@@ -76,14 +76,19 @@ function onError(error) {
  */
 
 function onListening() {
-    var addr = server.address();
+    var addr = this.address();
     var bind = typeof addr === 'string' ? 'pipe ' + addr : 'port ' + addr.port;
     debug('Listening on ' + bind);
 
+    var name = config.name || 'bekant';
+
     // advertise via bonjour
-    var ad = _mdns2['default'].createAdvertisement(_mdns2['default'].tcp('http'), addr.port, { txtRecord: {
-            name: 'bekant'
-        } });
+    var ad = _mdns2['default'].createAdvertisement(_mdns2['default'].tcp('bekant'), addr.port, {
+        txtRecord: {
+            name: name
+        },
+        name: name
+    });
 
     ad.start();
 }
@@ -97,7 +102,7 @@ _app2['default'].set('port', port);
 var server = _http2['default'].createServer(_app2['default']);
 
 // setup socket.io
-(0, _libIo2['default'])(server);
+_libIo2['default'].init(server);
 
 // listen on provided port
 server.listen(port, config.host || '0.0.0.0');

@@ -15,7 +15,7 @@ export default class User extends Model{
     }
 
     get allowedKeys() {
-        return _.union(super.allowedKeys, ['password', 'username', 'name']);
+        return _.union(super.allowedKeys, ['password', 'username', 'name', 'apiKey']);
     }
 
     getSecureData() {
@@ -24,5 +24,9 @@ export default class User extends Model{
         delete tmp.password;
 
         return tmp;
+    }
+
+    createApiKey() {
+        return bcrypt.genSaltSync(10);
     }
 }

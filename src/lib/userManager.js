@@ -10,7 +10,7 @@ class UserManager {
         this.db = db;
 
         this.getCollection().then((collection) => {
-            collection._ensureIndex({
+            collection.createIndex({
                 username: 1
             }, {
                 unique: true,
@@ -22,7 +22,11 @@ class UserManager {
     findByUsername(username) {
         return this.db.ready().then(() => {
             return this.db.findOne('users', {username: username}).then((data) => {
-                return new User(data);
+                if (data) {
+                    return new User(data);
+                } else {
+                    return null;
+                }
             });
         });
     }
@@ -39,6 +43,10 @@ class UserManager {
 
     saveUser(user) {
         return new Promise((resolve, reject) => {
+            if (!user.apiKey) {
+                user.apiKey = user.createApiKey();
+            }
+
             let data = _.assign({}, user);
 
             delete data._id;
@@ -84,7 +92,7 @@ class UserManager {
                         }, (err) => {
                             reject(err);
                         });
-                })
+                });
         });
     }
 

@@ -4,9 +4,8 @@
   "description": "Express ap for controlling an IKEA Bekant desk",
   "main": "dist/server.js",
   "scripts": {
-    "start": "node .",
-    "test": "./node_modules/.bin/jasmine-node --verbose --captureExceptions ./spec/",
-    "postinstall": "gulp"
+    "start": "sudo node .",
+    "test": "./node_modules/.bin/jasmine-node --verbose --captureExceptions ./spec/"
   },
   "repository": {
     "type": "git",
@@ -35,6 +34,8 @@
     "morgan": "~1.6.1",
     "passport": "^0.3.0",
     "passport.socketio": "^3.6.1",
+    "r-pi-gpio": "^3.0.0",
+    "r-pi-usonic": "^2.5.0",
     "serve-favicon": "~2.3.0",
     "socket.io": "^1.3.7"
   },

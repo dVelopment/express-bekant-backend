@@ -26,7 +26,19 @@ var _cookieParser = require('cookie-parser');
 
 var _cookieParser2 = _interopRequireDefault(_cookieParser);
 
-var io = undefined;
+var _lodash = require('lodash');
+
+var _lodash2 = _interopRequireDefault(_lodash);
+
+var _socket = require('./socket');
+
+var _socket2 = _interopRequireDefault(_socket);
+
+var io = undefined,
+    promise = undefined;
+
+var listeners = [];
+var sockets = [];
 
 function onAuthorizeSuccess(data, accept) {
     console.log('successful connection to socket.io');
@@ -44,20 +56,45 @@ function init(server) {
         throw new Error('io.init already called');
     }
 
-    io = (0, _socketIo2['default'])(server);
+    promise = new Promise(function (resolve) {
+        io = (0, _socketIo2['default'])(server);
 
-    io.use(_passportSocketio2['default'].authorize({
-        cookieParser: _cookieParser2['default'],
-        secret: _settings2['default'].get('session').secret,
-        store: _session2['default'].store,
-        success: onAuthorizeSuccess,
-        fail: onAuthorizeFail
-    }));
+        io.use(_passportSocketio2['default'].authorize({
+            cookieParser: _cookieParser2['default'],
+            secret: _settings2['default'].get('session').secret,
+            store: _session2['default'].store,
+            success: onAuthorizeSuccess,
+            fail: onAuthorizeFail
+        }));
 
-    io.sockets.on('connection', function (socket) {
-        console.log(socket.request.user);
+        io.sockets.on('connection', function (socket) {
+            var tmp = new _socket2['default'](socket);
+            sockets.push(tmp);
+            socket.on('disconnect', function () {
+                _lodash2['default'].remove(sockets, tmp);
+            });
+        });
+
+        resolve(io);
+
+        _lodash2['default'].forEach(listeners, function (l) {
+            return l(io);
+        });
     });
 }
 
-exports['default'] = init;
+function getIo() {
+    if (!promise) {
+        return new Promise(function (resolve) {
+            listeners.push(resolve);
+        });
+    } else {
+        return promise;
+    }
+}
+
+exports['default'] = {
+    init: init,
+    io: getIo
+};
 module.exports = exports['default'];
