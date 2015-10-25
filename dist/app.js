@@ -31,8 +31,15 @@ var bodyParser = require('body-parser');
 
 var app = express();
 
+// view engine setup
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'jade');
+
 app.use(_libSession2['default'].session);
-app.use((0, _cors2['default'])());
+app.use((0, _cors2['default'])({
+  origin: true,
+  credentials: true
+}));
 
 // uncomment after placing your favicon in /public
 //app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));

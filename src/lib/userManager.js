@@ -3,6 +3,7 @@
 import DataBase from './db';
 import User from '../model/user';
 import _ from 'lodash';
+import {ObjectID} from 'mongodb';
 
 class UserManager {
     constructor(db) {
@@ -73,7 +74,7 @@ class UserManager {
         return new Promise((resolve, reject) => {
             this.getCollection()
                 .then((collection) => {
-                    collection.findOne({_id: id})
+                    collection.findOne({_id: new ObjectID(id)})
                         .then((data) => {
                             if (data) {
                                 resolve(new User(data));

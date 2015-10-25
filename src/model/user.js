@@ -17,4 +17,12 @@ export default class User extends Model{
     get allowedKeys() {
         return _.union(super.allowedKeys, ['password', 'username', 'name']);
     }
+
+    getSecureData() {
+        let tmp = _.extend({}, this);
+
+        delete tmp.password;
+
+        return tmp;
+    }
 }

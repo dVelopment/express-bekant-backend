@@ -32,6 +32,10 @@ var config = _settings2['default'].get('authentication');
 var initialized = false;
 var manager = undefined;
 
+function getUserData(user) {
+    return user.getSecureData();
+}
+
 function setupLocalAuthentication() {
 
     var LocalStrategy = require('passport-local').Strategy;
@@ -61,10 +65,7 @@ function setupLocalAuthentication() {
     });
     router.post('/signup', function (req, res) {
         function success(user) {
-            var tmp = _lodash2['default'].extend({}, user);
-            delete tmp.password;
-
-            res.json(tmp);
+            res.json(getUserData(user));
         }
 
         function saveUser() {
@@ -121,7 +122,7 @@ function setupStrategies() {
     });
 
     router.get('/loggedin', function (req, res) {
-        res.json(req.isAuthenticated() ? req.user : null);
+        res.json(req.isAuthenticated() ? getUserData(req.user) : null);
     });
 
     router.post('/logout', function (req, res) {

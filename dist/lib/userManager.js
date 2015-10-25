@@ -22,6 +22,8 @@ var _lodash = require('lodash');
 
 var _lodash2 = _interopRequireDefault(_lodash);
 
+var _mongodb = require('mongodb');
+
 var UserManager = (function () {
     function UserManager(db) {
         _classCallCheck(this, UserManager);
@@ -101,7 +103,7 @@ var UserManager = (function () {
 
             return new Promise(function (resolve, reject) {
                 _this3.getCollection().then(function (collection) {
-                    collection.findOne({ _id: id }).then(function (data) {
+                    collection.findOne({ _id: new _mongodb.ObjectID(id) }).then(function (data) {
                         if (data) {
                             resolve(new _modelUser2['default'](data));
                         } else {

@@ -13,6 +13,10 @@ let config = settings.get('authentication');
 let initialized = false;
 let manager;
 
+function getUserData(user) {
+    return user.getSecureData();
+}
+
 function setupLocalAuthentication() {
 
     let LocalStrategy = require('passport-local').Strategy;
@@ -43,10 +47,7 @@ function setupLocalAuthentication() {
     });
     router.post('/signup', (req, res) => {
         function success(user) {
-            let tmp = _.extend({}, user);
-            delete tmp.password;
-
-            res.json(tmp);
+            res.json(getUserData(user));
         }
 
         function saveUser() {
@@ -103,7 +104,7 @@ function setupStrategies() {
     });
 
     router.get('/loggedin', (req, res) => {
-        res.json(req.isAuthenticated() ? req.user : null);
+        res.json(req.isAuthenticated() ? getUserData(req.user) : null);
     });
 
     router.post('/logout', (req, res) => {
