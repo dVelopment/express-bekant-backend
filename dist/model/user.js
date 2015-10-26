@@ -61,7 +61,7 @@ var User = (function (_Model) {
     }, {
         key: 'allowedKeys',
         get: function get() {
-            return _lodash2['default'].union(_get(Object.getPrototypeOf(User.prototype), 'allowedKeys', this), ['password', 'username', 'name']);
+            return _lodash2['default'].union(_get(Object.getPrototypeOf(User.prototype), 'allowedKeys', this), ['password', 'username', 'name', 'apiKey']);
         }
     }]);
 

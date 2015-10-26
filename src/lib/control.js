@@ -5,10 +5,11 @@ import gpio from 'r-pi-gpio';
 import settings from './settings';
 import async from 'async';
 import cleanup from './cleanup';
+import request from 'request';
 
 let config = settings.get('desk');
 
-class Control {
+class DirectControl {
     constructor(sensor, config) {
         this.sensor = sensor;
         this.config = config;
@@ -74,6 +75,93 @@ class Control {
     }
 }
 
-let control = new Control(sensor, config);
+class HttpControl {
+    constructor(config) {
+        this.config = config;
+        this.url = `http://${config.host || '127.0.0.1'}:${config.port || 8080}/${(config.path || '').replace(/^\//, '')}`;
+
+        this.promise = new Promise((resolve) => {
+            resolve();
+        });
+    }
+
+    ready() {
+        return this.promise;
+    }
+
+    readDistance() {
+        if (this.reading) {
+            return this.reading;
+        }
+
+        this.reading = this.request('position')
+            .then((data) => data.Position);
+
+        return this.reading;
+    }
+
+    stop() {
+        return this.request('stop', 'POST')
+            .then((data) => data.Position);
+    }
+
+    move(direction) {
+        return this.request('move/' + direction, 'POST');
+    }
+
+    up() {
+        return this.move('up');
+    }
+
+    down() {
+        return this.move('down');
+    }
+
+    request(path, method = 'GET') {
+        return new Promise((resolve, reject) => {
+            request({
+                url: this.url + path,
+                method: method
+            }, (err, response, body) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(JSON.parse(body));
+                }
+            });
+        });
+    }
+
+    goTo(position) {
+        return this.request('go/' + position, 'POST')
+            .then((data) => data.Position);
+    }
+
+    prime() {
+        return this.request('prime', 'POST')
+            .then((data) => data.Position);
+    }
+
+    status() {
+        return this.request('status')
+            .then((data) => data.IsPrimed);
+    }
+}
+
+let control;
+
+switch(config.type) {
+    default:
+        throw new Error(`unknown control type: "${config.type}"`)
+    break;
+    case 'direct':
+        control = new DirectControl(sensor, config);
+    break;
+    case 'http':
+        control = new HttpControl(config.config);
+    break;
+}
+
+
 
 export default control;

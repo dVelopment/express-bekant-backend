@@ -34,6 +34,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 auth.init(app);
 app.use('/auth', auth.router);
 
+// static files
+app.use('/', express.static('./frontend/www'));
+
 // setup routes
 router(app);
 

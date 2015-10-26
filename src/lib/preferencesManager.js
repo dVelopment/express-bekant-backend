@@ -18,14 +18,23 @@ class PreferencesManager {
         });
     }
 
-    createPreference(label, height, user) {
+    createPreference(label, position, user) {
         let pref = new Preference({
             label: label,
-            height: height
+            position: position
         });
         pref.setUser(user);
 
         return pref;
+    }
+
+    removePreference(preference) {
+        return new Promise((resolve, reject) => {
+            this.getCollection().then((collection) => {
+                collection.remove({_id: preference._id})
+                    .then(resolve, reject);
+            });
+        });
     }
 
     savePreference(preference) {
@@ -49,7 +58,7 @@ class PreferencesManager {
             this.getCollection().then((collection) => {
                 let promise;
                 if (preference._id) {
-                    promise = collection.udate({_id: preference._id}, {$set: data});
+                    promise = collection.update({_id: preference._id}, {$set: data});
                 } else {
                     promise = collection.insert(data);
                 }
@@ -63,17 +72,23 @@ class PreferencesManager {
         return new Promise((resolve, reject) => {
             this.getCollection()
                 .then((collection) => {
-                    collection.findOne({_id: new ObjectID(id), userId: user._id})
+                    console.log('[PreferencesManager] collection loaded');
+                    let params = {_id: new ObjectID(id), userId: user._id};
+
+                    console.log('[PreferencesManager] findById params', params);
+                    collection.findOne(params)
                         .then((data) => {
+                            console.log('[PreferencesManager] preference loaded', data);
                             if (data) {
                                 resolve(new Preference(data));
                             } else {
                                 reject('invalid preference id');
                             }
                         }, (err) => {
+                            console.log('[PreferencesManager] error loading preference', err);
                             reject(err);
                         });
-                });
+                }, reject);
         });
     }
 
@@ -99,9 +114,11 @@ class PreferencesManager {
     }
 
     getCollection() {
-        return this.db.ready().then(() => {
-            console.log('[PreferencesManager] db ready');
-            return this.db.getCollection('preferences');
+        return new Promise((resolve, reject) => {
+            this.db.ready().then(() => {
+                console.log('[PreferencesManager] db ready');
+                resolve(this.db.getCollection('preferences'));
+            }, reject);
         });
     }
 }
