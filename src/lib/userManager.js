@@ -4,10 +4,12 @@ import DataBase from './db';
 import User from '../model/user';
 import _ from 'lodash';
 import {ObjectID} from 'mongodb';
+import ApiKeyManager from './apiKeyManager';
 
 class UserManager {
     constructor(db) {
         this.db = db;
+        this.apiKeyManager = ApiKeyManager();
 
         this.getCollection().then((collection) => {
             collection.createIndex({
@@ -43,21 +45,26 @@ class UserManager {
 
     saveUser(user) {
         return new Promise((resolve, reject) => {
-            if (!user.apiKey) {
-                user.apiKey = user.createApiKey();
-            }
-
             let data = _.assign({}, user);
 
             delete data._id;
 
-            function onSuccess(result) {
+            let onSuccess = (result) => {
+                console.log('[UserManager] user saved successfully', result);
                 if (result.insertedIds && result.insertedIds.length) {
                     user._id = result.insertedIds[1];
-                }
 
-                resolve(user);
-            }
+                    let apiKey = this.apiKeyManager.createApiKey();
+                    apiKey.setUser(user);
+
+                    this.apiKeyManager.saveApiKey(apiKey).then((apiKey) => {
+                        console.log('[UserManager] api key created', apiKey);
+                        resolve(user);
+                    });
+                } else {
+                    resolve(user);
+                }
+            };
 
             function onError(err) {
                 reject(err);
@@ -93,6 +100,16 @@ class UserManager {
                             reject(err);
                         });
                 });
+        });
+    }
+
+    findForApiKey(key) {
+        return this.apiKeyManager.findByKey(key).then((apiKey) => {
+            if (apiKey) {
+                return this.findById(apiKey.userId);
+            } else {
+                return Promise.reject();
+            }
         });
     }
 

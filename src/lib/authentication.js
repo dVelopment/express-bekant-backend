@@ -8,13 +8,71 @@ let router = express.Router();
 
 import settings from './settings';
 import UserManager from './userManager';
+import ApiKeyManager from './apiKeyManager';
+import moment from 'moment';
+import User from '../model/user';
 
 let config = settings.get('authentication');
 let initialized = false;
-let manager;
+let userManager, apiKeyManager;
+
+let authenticate = passport.authenticate('localapikey', { session: true });
 
 function getUserData(user) {
-    return user.getSecureData();
+    return (user instanceof User) ? user.getSecureData() : user;
+}
+
+function sendApiKey(res, user) {
+    apiKeyManager.findForUser(user._id.toString()).then((apiKey) => {
+        let tmp = _.assign({}, apiKey);
+        tmp.expires = moment(apiKey.expires).unix();
+
+        let payload = {
+            user: getUserData(user),
+            apiKey: tmp
+        };
+
+        res.json(payload);
+    }, (err) => {
+        console.log('[authenticate] error retrieving api key', err);
+
+        res.sendStatus(500);
+    });
+}
+
+function setupApiKeyAuthentication() {
+    let LocalAPIKeyStrategy = require('passport-localapikey').Strategy;
+
+    passport.use(new LocalAPIKeyStrategy({
+            apiKeyHeader: 'X-Api-Key'
+        },
+        (apiKey, done) => {
+            console.log('[authenticate] authenticate api key', apiKey);
+            userManager.findForApiKey(apiKey).then((user) => {
+                if (!user) {
+                    return done(null, false, {message: 'invalid api key.'});
+                }
+
+                return done(null, getUserData(user));
+            }, (err) => {
+                return done(err);
+            });
+        }
+    ));
+
+    router.post(
+        '/api_key/extend',
+        authenticate,
+        (req, res) => {
+            apiKeyManager.findForUser(req.user._id)
+                .then((apiKey) => {
+                    apiKeyManager.extendApiKey(apiKey)
+                        .then((apiKey) => {
+                            res.json(apiKey);
+                        });
+                });
+        }
+    );
 }
 
 function setupLocalAuthentication() {
@@ -25,7 +83,7 @@ function setupLocalAuthentication() {
             usernameField: 'username',
             passwordField: 'password'
         }, (username, password, done) => {
-            manager.findByUsername(username).then((user) => {
+            userManager.findByUsername(username).then((user) => {
                 if (!user) {
                     return done(null, false, {message: 'Incorrect username.'});
                 }
@@ -43,19 +101,19 @@ function setupLocalAuthentication() {
 
     // setup routes
     router.post('/local/login', passport.authenticate('local'), (req, res) => {
-        res.send(req.user);
+        sendApiKey(res, req.user);
     });
     router.post('/local/signup', (req, res) => {
         function success(user) {
-            res.json(getUserData(user));
+            sendApiKey(res, user);
         }
 
         function saveUser() {
-            let user = manager.createUser(req.body.username, req.body.password);
+            let user = userManager.createUser(req.body.username, req.body.password);
 
             user.provider = 'local';
 
-            manager.saveUser(user).then((user) => {
+            userManager.saveUser(user).then((user) => {
                 if (!req.isAuthenticated()) {
                     req.login(user, (err) => {
                         if (err) {
@@ -74,9 +132,11 @@ function setupLocalAuthentication() {
             });
         }
 
+        console.log('POST /auth/local/signup', req.isAuthenticated());
+
         if (!req.isAuthenticated()) {
             // only allow registration if no user exists
-            manager.hasUsers().then((hasUsers) => {
+            userManager.hasUsers().then((hasUsers) => {
                 console.log('hasUser', hasUsers);
                 if (hasUsers) {
                     res.sendStatus(403);
@@ -92,24 +152,16 @@ function setupLocalAuthentication() {
 }
 
 function setupStrategies() {
+    setupApiKeyAuthentication();
     _.forEach(config.providers, (conf, provider) => {
         switch (provider) {
             default:
                 throw new Error('unknown authentication provider: ' + provider);
-            break;
+                break;
             case 'local':
                 setupLocalAuthentication();
-            break;
+                break;
         }
-    });
-
-    router.get('/loggedin', (req, res) => {
-        res.json(req.isAuthenticated() ? getUserData(req.user) : null);
-    });
-
-    router.post('/logout', (req, res) => {
-        req.logOut();
-        res.sendStatus(200);
     });
 }
 
@@ -130,7 +182,8 @@ function auth(req, res, next) {
 
 function init(app) {
     if (initialized === false) {
-        manager = UserManager();
+        userManager = UserManager();
+        apiKeyManager = ApiKeyManager();
         setupStrategies();
 
         app.use(passport.initialize());
@@ -144,7 +197,7 @@ function init(app) {
 
         passport.deserializeUser((id, done) => {
             console.log('deserialize user', id);
-            manager.findById(id).then((user) => {
+            userManager.findById(id).then((user) => {
                 done(null, user);
             }, (err) => {
                 console.log('error deserializing user', err);
@@ -156,6 +209,6 @@ function init(app) {
 
 export default {
     init: init,
-    auth: auth,
+    auth: authenticate,
     router: router
 };
