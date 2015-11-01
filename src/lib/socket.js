@@ -12,13 +12,9 @@ export default class Socket {
         this.socket.on('move', this.move.bind(this));
         this.socket.on('stop', this.stop.bind(this));
         this.socket.on('go', this.goTo.bind(this));
-        this.socket.on('disconnect', this.clearReadingInterval.bind(this));
-
-        this.readingInterval = setInterval(this.readDistance.bind(this), 500);
-    }
-
-    clearReadingInterval() {
-        clearInterval(this.readingInterval);
+        this.socket.on('status', this.status.bind(this));
+        this.socket.on('prime', this.prime.bind(this));
+        this.socket.on('position', this.readDistance.bind(this));
     }
 
     move(direction) {
@@ -39,71 +35,67 @@ export default class Socket {
     }
 
     stop() {
-        this.clearInterval();
         return this.control.ready().then(() => {
-            return this.control.stop().then(() => {
-                this.socket.emit('stopped');
-                this.socket.broadcast.emit('stopped');
+            return this.control.stop().then((pos) => {
+                this.socket.emit('stopped', pos);
+                this.socket.broadcast.emit('stopped', pos);
             });
         });
     }
 
-    clearInterval() {
-        if (this.interval) {
-            clearInterval(this.interval);
-            this.interval = null;
-        }
-    }
-
     goTo(id) {
-        this.clearInterval();
         manager.findById(id, this.socket.request.user)
             .then((preference) => {
                 if (preference) {
-                    let started = false;
-                    let direction;
-                    let reading = 0;
-                    let sum = 0.0;
+                    // get the current position
+                    this.control.readDistance().then((position) => {
+                        let delta = preference.position - position;
 
-                    let process = (distance) => {
-                        let delta = preference.height - distance;
-
-                        console.log('delta', delta, preference.height, distance);
-
-                        if (Math.abs(delta) < 1) {
-                            this.stop();
-                        } else if (!started) {
-                            started = true;
-                            if (delta > 0) {
-                                direction = 'up';
-                            } else {
-                                direction = 'down';
-                            }
-                            this.move(direction);
-                        } else {
-                            // gone too far?
-                            if (direction === 'up') {
-                                if (delta < 1) {
-                                    this.stop();
-                                }
-                            } else if (delta > 1) {
-                                this.stop();
-                            }
-                        }
-                    };
-
-                    this.interval = setInterval(() => {
-                        this.control.readDistance().then(process);
-                    }, 500);
+                        let direction = delta > 0 ? 'down' : 'up';
+                        this.socket.emit('moving', direction);
+                        this.socket.broadcast.emit('moving', direction);
+                        this.control.goTo(preference.position)
+                            .then((pos) => {
+                                this.socket.emit('stopped', pos);
+                                this.socket.broadcast.emit('stopped', pos);
+                            });
+                    });
                 }
             }, (err) => {
                 console.log('[Socket] preference not found', err);
             });
     }
 
+    status() {
+        console.log('[Socket] status requested');
+        this.control.ready().then(() => {
+            this.control.status().then((status) => {
+                console.log('[Socket] is primed', status);
+                this.socket.emit('status', status);
+            });
+        });
+    }
+
+    prime() {
+        console.log('[Socket] prime');
+        this.control.ready().then(() => {
+            this.socket.emit('priming');
+            this.control.prime().then((pos) => {
+                this.socket.emit('primed', pos);
+                this.socket.emit('distance', pos);
+                this.socket.broadcast.emit('distance', pos);
+            }, () => {
+                this.socket.emit('primed')
+            });
+        });
+    }
+
     readDistance() {
-        this.control.readDistance().then((distance) => {
-            this.socket.emit('distance', distance);
+        this.control.ready().then(() => {
+            this.control.readDistance().then((distance) => {
+                console.log('[Socket] current position', distance);
+                this.socket.emit('distance', distance);
+            });
         });
     }
 }

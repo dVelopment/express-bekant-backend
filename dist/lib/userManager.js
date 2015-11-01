@@ -31,7 +31,7 @@ var UserManager = (function () {
         this.db = db;
 
         this.getCollection().then(function (collection) {
-            collection._ensureIndex({
+            collection.createIndex({
                 username: 1
             }, {
                 unique: true,

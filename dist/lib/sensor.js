@@ -22,48 +22,97 @@ var _async = require('async');
 
 var _async2 = _interopRequireDefault(_async);
 
-var _rpiGpio = require('rpi-gpio');
+var _rPiUsonic = require('r-pi-usonic');
 
-var _rpiGpio2 = _interopRequireDefault(_rpiGpio);
+var _rPiUsonic2 = _interopRequireDefault(_rPiUsonic);
+
+var _request = require('request');
+
+var _request2 = _interopRequireDefault(_request);
 
 var config = _settings2['default'].get('sensor');
 
 var sensor = undefined;
 
+var HttpSensor = (function () {
+    function HttpSensor(config) {
+        _classCallCheck(this, HttpSensor);
+
+        this.url = 'http://' + (config.host || '127.0.0.1') + ':' + (config.port || 8080) + '/';
+        this.config = config;
+
+        this.promise = new Promise(function (resolve) {
+            resolve();
+        });
+    }
+
+    _createClass(HttpSensor, [{
+        key: 'ready',
+        value: function ready() {
+            return this.promise;
+        }
+    }, {
+        key: 'getDistance',
+        value: function getDistance() {
+            var _this = this;
+
+            return new Promise(function (resolve, reject) {
+                _this.ready().then(function () {
+                    (0, _request2['default'])({
+                        url: _this.url + (_this.config.path ? _this.config.path.replace(/^\//, '') : '')
+                    }, function (err, response, body) {
+                        if (err) {
+                            reject(err);
+                        } else {
+                            var data = JSON.parse(body);
+
+                            resolve(data.Distance);
+                        }
+                    });
+                });
+            });
+        }
+    }]);
+
+    return HttpSensor;
+})();
+
 var UltraSonicSensor = (function () {
     function UltraSonicSensor(config) {
-        var _this = this;
+        var _this2 = this;
 
         _classCallCheck(this, UltraSonicSensor);
 
         this.promise = new Promise(function (resolve) {
-            var usonic = require('r-pi-usonic');
-
-            _async2['default'].parallel([function (cb) {
-                _rpiGpio2['default'].setup(config.echoPin, _rpiGpio2['default'].DIR_IN, cb);
-            }, function (cb) {
-                _rpiGpio2['default'].setup(config.triggerPin, _rpiGpio2['default'].DIR_OUT, cb);
-            }], function (err) {
+            _rPiUsonic2['default'].init(function (err) {
                 if (err) {
                     throw err;
                 }
 
-                _this.sensor = usonic.createSensor(config.echoPin, config.triggerPin);
+                _this2.sensor = _rPiUsonic2['default'].createSensor(config.echoPin, config.triggerPin);
                 resolve();
-            });
-            _cleanup2['default'].addListener(function () {
-                return _rpiGpio2['default'].destroy();
             });
         });
     }
 
     _createClass(UltraSonicSensor, [{
+        key: 'ready',
+        value: function ready() {
+            return this.promise;
+        }
+    }, {
         key: 'getDistance',
         value: function getDistance() {
-            var _this2 = this;
+            var _this3 = this;
 
             return this.promise.then(function () {
-                return _this2.sensor();
+                var sum = 0.0;
+
+                for (var i = 0; i < 20; i++) {
+                    sum += _this3.sensor();
+                }
+
+                return sum / 20;
             });
         }
     }]);
@@ -77,6 +126,9 @@ switch (config.type) {
         break;
     case 'ultrasonic':
         sensor = new UltraSonicSensor(config.config);
+        break;
+    case 'http':
+        sensor = new HttpSensor(config.config);
         break;
 }
 

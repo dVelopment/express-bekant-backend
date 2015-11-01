@@ -9,6 +9,6 @@ export default class Preference extends Model {
     }
 
     get allowedKeys() {
-        return _.union(super.allowedKeys, ['userId', 'height', 'label']);
+        return _.union(super.allowedKeys, ['userId', 'position', 'label']);
     }
 }

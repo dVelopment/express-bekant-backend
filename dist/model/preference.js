@@ -22,51 +22,29 @@ var _lodash = require('lodash');
 
 var _lodash2 = _interopRequireDefault(_lodash);
 
-var bcrypt = require('bcrypt');
+var Preference = (function (_Model) {
+    _inherits(Preference, _Model);
 
-var User = (function (_Model) {
-    _inherits(User, _Model);
+    function Preference() {
+        _classCallCheck(this, Preference);
 
-    function User() {
-        _classCallCheck(this, User);
-
-        _get(Object.getPrototypeOf(User.prototype), 'constructor', this).apply(this, arguments);
+        _get(Object.getPrototypeOf(Preference.prototype), 'constructor', this).apply(this, arguments);
     }
 
-    _createClass(User, [{
-        key: 'setPassword',
-        value: function setPassword(plainPassword) {
-            var salt = bcrypt.genSaltSync(10);
-            this.password = bcrypt.hashSync(plainPassword, salt);
-        }
-    }, {
-        key: 'validatePassword',
-        value: function validatePassword(plainPassword) {
-            return bcrypt.compareSync(plainPassword, this.password);
-        }
-    }, {
-        key: 'getSecureData',
-        value: function getSecureData() {
-            var tmp = _lodash2['default'].extend({}, this);
-
-            delete tmp.password;
-
-            return tmp;
-        }
-    }, {
-        key: 'createApiKey',
-        value: function createApiKey() {
-            return bcrypt.genSaltSync(10);
+    _createClass(Preference, [{
+        key: 'setUser',
+        value: function setUser(user) {
+            this.userId = user._id;
         }
     }, {
         key: 'allowedKeys',
         get: function get() {
-            return _lodash2['default'].union(_get(Object.getPrototypeOf(User.prototype), 'allowedKeys', this), ['password', 'username', 'name', 'apiKey']);
+            return _lodash2['default'].union(_get(Object.getPrototypeOf(Preference.prototype), 'allowedKeys', this), ['userId', 'height', 'label']);
         }
     }]);
 
-    return User;
+    return Preference;
 })(_model2['default']);
 
-exports['default'] = User;
+exports['default'] = Preference;
 module.exports = exports['default'];
