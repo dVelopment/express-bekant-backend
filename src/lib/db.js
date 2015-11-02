@@ -11,8 +11,9 @@ let PROMISE = Symbol();
 class DataBase {
     constructor(config) {
         this[PROMISE] = new Promise((resolve) => {
+            let url = `mongodb://${config.host}:${config.port}/${config.db}`;
             MongoClient.connect(
-                `mongodb://${config.host}:{$config.port}/${config.db}`,
+                url,
                 (err, conn) => {
                     if (err) {
                         throw err;

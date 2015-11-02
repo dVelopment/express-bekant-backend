@@ -34,6 +34,10 @@ var _socket = require('./socket');
 
 var _socket2 = _interopRequireDefault(_socket);
 
+var _app = require('../app');
+
+var _app2 = _interopRequireDefault(_app);
+
 var io = undefined,
     promise = undefined;
 

@@ -24,11 +24,16 @@ var _lodash2 = _interopRequireDefault(_lodash);
 
 var _mongodb = require('mongodb');
 
+var _apiKeyManager = require('./apiKeyManager');
+
+var _apiKeyManager2 = _interopRequireDefault(_apiKeyManager);
+
 var UserManager = (function () {
     function UserManager(db) {
         _classCallCheck(this, UserManager);
 
         this.db = db;
+        this.apiKeyManager = (0, _apiKeyManager2['default'])();
 
         this.getCollection().then(function (collection) {
             collection.createIndex({
@@ -72,21 +77,26 @@ var UserManager = (function () {
             var _this2 = this;
 
             return new Promise(function (resolve, reject) {
-                if (!user.apiKey) {
-                    user.apiKey = user.createApiKey();
-                }
-
                 var data = _lodash2['default'].assign({}, user);
 
                 delete data._id;
 
-                function onSuccess(result) {
+                var onSuccess = function onSuccess(result) {
+                    console.log('[UserManager] user saved successfully', result);
                     if (result.insertedIds && result.insertedIds.length) {
                         user._id = result.insertedIds[1];
-                    }
 
-                    resolve(user);
-                }
+                        var apiKey = _this2.apiKeyManager.createApiKey();
+                        apiKey.setUser(user);
+
+                        _this2.apiKeyManager.saveApiKey(apiKey).then(function (apiKey) {
+                            console.log('[UserManager] api key created', apiKey);
+                            resolve(user);
+                        });
+                    } else {
+                        resolve(user);
+                    }
+                };
 
                 function onError(err) {
                     reject(err);
@@ -111,7 +121,7 @@ var UserManager = (function () {
 
             return new Promise(function (resolve, reject) {
                 _this3.getCollection().then(function (collection) {
-                    collection.findOne({ _id: new _mongodb.ObjectID(id) }).then(function (data) {
+                    collection.findOne({ _id: new _mongodb.ObjectID(id.toString()) }).then(function (data) {
                         if (data) {
                             resolve(new _modelUser2['default'](data));
                         } else {
@@ -121,6 +131,19 @@ var UserManager = (function () {
                         reject(err);
                     });
                 });
+            });
+        }
+    }, {
+        key: 'findForApiKey',
+        value: function findForApiKey(key) {
+            var _this4 = this;
+
+            return this.apiKeyManager.findByKey(key).then(function (apiKey) {
+                if (apiKey) {
+                    return _this4.findById(apiKey.userId);
+                } else {
+                    return Promise.reject();
+                }
             });
         }
     }, {
@@ -135,10 +158,10 @@ var UserManager = (function () {
     }, {
         key: 'getCollection',
         value: function getCollection() {
-            var _this4 = this;
+            var _this5 = this;
 
             return this.db.ready().then(function () {
-                return _this4.db.getCollection('users');
+                return _this5.db.getCollection('users');
             });
         }
     }]);

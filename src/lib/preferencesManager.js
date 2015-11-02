@@ -118,7 +118,10 @@ class PreferencesManager {
             this.db.ready().then(() => {
                 console.log('[PreferencesManager] db ready');
                 resolve(this.db.getCollection('preferences'));
-            }, reject);
+            }, (err) => {
+                console.log('[PreferencesManager] error waiting on db', err);
+                reject(err);
+            });
         });
     }
 }

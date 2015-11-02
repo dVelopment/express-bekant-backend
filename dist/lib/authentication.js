@@ -26,14 +26,74 @@ var _userManager = require('./userManager');
 
 var _userManager2 = _interopRequireDefault(_userManager);
 
+var _apiKeyManager = require('./apiKeyManager');
+
+var _apiKeyManager2 = _interopRequireDefault(_apiKeyManager);
+
+var _moment = require('moment');
+
+var _moment2 = _interopRequireDefault(_moment);
+
+var _modelUser = require('../model/user');
+
+var _modelUser2 = _interopRequireDefault(_modelUser);
+
 var router = _express2['default'].Router();
 
 var config = _settings2['default'].get('authentication');
 var initialized = false;
-var manager = undefined;
+var userManager = undefined,
+    apiKeyManager = undefined;
+
+var authenticate = _passport2['default'].authenticate('localapikey', { session: true });
 
 function getUserData(user) {
-    return user.getSecureData();
+    return user instanceof _modelUser2['default'] ? user.getSecureData() : user;
+}
+
+function sendApiKey(res, user) {
+    apiKeyManager.findForUser(user._id.toString()).then(function (apiKey) {
+        var tmp = _lodash2['default'].assign({}, apiKey);
+        tmp.expires = (0, _moment2['default'])(apiKey.expires).unix();
+
+        var payload = {
+            user: getUserData(user),
+            apiKey: tmp
+        };
+
+        res.json(payload);
+    }, function (err) {
+        console.log('[authenticate] error retrieving api key', err);
+
+        res.sendStatus(500);
+    });
+}
+
+function setupApiKeyAuthentication() {
+    var LocalAPIKeyStrategy = require('passport-localapikey').Strategy;
+
+    _passport2['default'].use(new LocalAPIKeyStrategy({
+        apiKeyHeader: 'x-api-key'
+    }, function (apiKey, done) {
+        console.log('[authenticate] authenticate api key', apiKey);
+        userManager.findForApiKey(apiKey).then(function (user) {
+            if (!user) {
+                return done(null, false, { message: 'invalid api key.' });
+            }
+
+            return done(null, getUserData(user));
+        }, function (err) {
+            return done(err);
+        });
+    }));
+
+    router.post('/api_key/extend', authenticate, function (req, res) {
+        apiKeyManager.findForUser(req.user._id).then(function (apiKey) {
+            apiKeyManager.extendApiKey(apiKey).then(function (apiKey) {
+                res.json(apiKey);
+            });
+        });
+    });
 }
 
 function setupLocalAuthentication() {
@@ -44,7 +104,7 @@ function setupLocalAuthentication() {
         usernameField: 'username',
         passwordField: 'password'
     }, function (username, password, done) {
-        manager.findByUsername(username).then(function (user) {
+        userManager.findByUsername(username).then(function (user) {
             if (!user) {
                 return done(null, false, { message: 'Incorrect username.' });
             }
@@ -61,24 +121,26 @@ function setupLocalAuthentication() {
 
     // setup routes
     router.post('/local/login', _passport2['default'].authenticate('local'), function (req, res) {
-        res.send(req.user);
+        sendApiKey(res, req.user);
     });
     router.post('/local/signup', function (req, res) {
         function success(user) {
-            res.json(getUserData(user));
+            sendApiKey(res, user);
         }
 
         function saveUser() {
-            var user = manager.createUser(req.body.username, req.body.password);
+            var user = userManager.createUser(req.body.username, req.body.password);
 
             user.provider = 'local';
 
-            manager.saveUser(user).then(function (user) {
+            userManager.saveUser(user).then(function (user) {
+                console.log('[signup]user saved', user);
                 if (!req.isAuthenticated()) {
                     req.login(user, function (err) {
                         if (err) {
-                            console.log('err', err);
+                            console.log('error signing up', err, err.stack);
                             res.sendStatus(500);
+                            throw err;
                         } else {
                             success(user);
                         }
@@ -92,9 +154,11 @@ function setupLocalAuthentication() {
             });
         }
 
+        console.log('POST /auth/local/signup', req.isAuthenticated());
+
         if (!req.isAuthenticated()) {
             // only allow registration if no user exists
-            manager.hasUsers().then(function (hasUsers) {
+            userManager.hasUsers().then(function (hasUsers) {
                 console.log('hasUser', hasUsers);
                 if (hasUsers) {
                     res.sendStatus(403);
@@ -110,6 +174,7 @@ function setupLocalAuthentication() {
 }
 
 function setupStrategies() {
+    setupApiKeyAuthentication();
     _lodash2['default'].forEach(config.providers, function (conf, provider) {
         switch (provider) {
             default:
@@ -119,15 +184,6 @@ function setupStrategies() {
                 setupLocalAuthentication();
                 break;
         }
-    });
-
-    router.get('/loggedin', function (req, res) {
-        res.json(req.isAuthenticated() ? getUserData(req.user) : null);
-    });
-
-    router.post('/logout', function (req, res) {
-        req.logOut();
-        res.sendStatus(200);
     });
 }
 
@@ -148,7 +204,8 @@ function auth(req, res, next) {
 
 function init(app) {
     if (initialized === false) {
-        manager = (0, _userManager2['default'])();
+        userManager = (0, _userManager2['default'])();
+        apiKeyManager = (0, _apiKeyManager2['default'])();
         setupStrategies();
 
         app.use(_passport2['default'].initialize());
@@ -162,7 +219,7 @@ function init(app) {
 
         _passport2['default'].deserializeUser(function (id, done) {
             console.log('deserialize user', id);
-            manager.findById(id).then(function (user) {
+            userManager.findById(id).then(function (user) {
                 done(null, user);
             }, function (err) {
                 console.log('error deserializing user', err);
@@ -174,7 +231,7 @@ function init(app) {
 
 exports['default'] = {
     init: init,
-    auth: auth,
+    auth: authenticate,
     router: router
 };
 module.exports = exports['default'];

@@ -22,29 +22,38 @@ var _lodash = require('lodash');
 
 var _lodash2 = _interopRequireDefault(_lodash);
 
-var Preference = (function (_Model) {
-    _inherits(Preference, _Model);
+var _nodeUuid = require('node-uuid');
 
-    function Preference() {
-        _classCallCheck(this, Preference);
+var _nodeUuid2 = _interopRequireDefault(_nodeUuid);
 
-        _get(Object.getPrototypeOf(Preference.prototype), 'constructor', this).apply(this, arguments);
+var ApiKey = (function (_Model) {
+    _inherits(ApiKey, _Model);
+
+    function ApiKey() {
+        _classCallCheck(this, ApiKey);
+
+        _get(Object.getPrototypeOf(ApiKey.prototype), 'constructor', this).apply(this, arguments);
     }
 
-    _createClass(Preference, [{
+    _createClass(ApiKey, [{
         key: 'setUser',
         value: function setUser(user) {
             this.userId = user._id;
         }
     }, {
+        key: 'createApiKey',
+        value: function createApiKey() {
+            this.apiKey = _nodeUuid2['default'].v1();
+        }
+    }, {
         key: 'allowedKeys',
         get: function get() {
-            return _lodash2['default'].union(_get(Object.getPrototypeOf(Preference.prototype), 'allowedKeys', this), ['userId', 'position', 'label']);
+            return _lodash2['default'].union(_get(Object.getPrototypeOf(ApiKey.prototype), 'allowedKeys', this), ['userId', 'expires', 'apiKey']);
         }
     }]);
 
-    return Preference;
+    return ApiKey;
 })(_model2['default']);
 
-exports['default'] = Preference;
+exports['default'] = ApiKey;
 module.exports = exports['default'];

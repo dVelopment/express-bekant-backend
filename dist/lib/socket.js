@@ -26,17 +26,12 @@ var Socket = (function () {
         this.socket.on('move', this.move.bind(this));
         this.socket.on('stop', this.stop.bind(this));
         this.socket.on('go', this.goTo.bind(this));
-        this.socket.on('disconnect', this.clearReadingInterval.bind(this));
-
-        this.readingInterval = setInterval(this.readDistance.bind(this), 500);
+        this.socket.on('status', this.status.bind(this));
+        this.socket.on('prime', this.prime.bind(this));
+        this.socket.on('position', this.readDistance.bind(this));
     }
 
     _createClass(Socket, [{
-        key: 'clearReadingInterval',
-        value: function clearReadingInterval() {
-            clearInterval(this.readingInterval);
-        }
-    }, {
         key: 'move',
         value: function move(direction) {
             var _this = this;
@@ -61,89 +56,77 @@ var Socket = (function () {
         value: function stop() {
             var _this2 = this;
 
-            this.clearInterval();
             return this.control.ready().then(function () {
-                return _this2.control.stop().then(function () {
-                    _this2.socket.emit('stopped');
-                    _this2.socket.broadcast.emit('stopped');
+                return _this2.control.stop().then(function (pos) {
+                    _this2.socket.emit('stopped', pos);
+                    _this2.socket.broadcast.emit('stopped', pos);
                 });
             });
         }
-    }, {
-        key: 'clearInterval',
-        value: (function (_clearInterval) {
-            function clearInterval() {
-                return _clearInterval.apply(this, arguments);
-            }
-
-            clearInterval.toString = function () {
-                return _clearInterval.toString();
-            };
-
-            return clearInterval;
-        })(function () {
-            if (this.interval) {
-                clearInterval(this.interval);
-                this.interval = null;
-            }
-        })
     }, {
         key: 'goTo',
         value: function goTo(id) {
             var _this3 = this;
 
-            this.clearInterval();
             manager.findById(id, this.socket.request.user).then(function (preference) {
                 if (preference) {
-                    (function () {
-                        var started = false;
-                        var direction = undefined;
-                        var reading = 0;
-                        var sum = 0.0;
+                    // get the current position
+                    _this3.control.readDistance().then(function (position) {
+                        var delta = preference.position - position;
 
-                        var process = function process(distance) {
-                            var delta = preference.height - distance;
-
-                            console.log('delta', delta, preference.height, distance);
-
-                            if (Math.abs(delta) < 1) {
-                                _this3.stop();
-                            } else if (!started) {
-                                started = true;
-                                if (delta > 0) {
-                                    direction = 'up';
-                                } else {
-                                    direction = 'down';
-                                }
-                                _this3.move(direction);
-                            } else {
-                                // gone too far?
-                                if (direction === 'up') {
-                                    if (delta < 1) {
-                                        _this3.stop();
-                                    }
-                                } else if (delta > 1) {
-                                    _this3.stop();
-                                }
-                            }
-                        };
-
-                        _this3.interval = setInterval(function () {
-                            _this3.control.readDistance().then(process);
-                        }, 500);
-                    })();
+                        var direction = delta > 0 ? 'down' : 'up';
+                        _this3.socket.emit('moving', direction);
+                        _this3.socket.broadcast.emit('moving', direction);
+                        _this3.control.goTo(preference.position).then(function (pos) {
+                            _this3.socket.emit('stopped', pos);
+                            _this3.socket.broadcast.emit('stopped', pos);
+                        });
+                    });
                 }
             }, function (err) {
                 console.log('[Socket] preference not found', err);
             });
         }
     }, {
-        key: 'readDistance',
-        value: function readDistance() {
+        key: 'status',
+        value: function status() {
             var _this4 = this;
 
-            this.control.readDistance().then(function (distance) {
-                _this4.socket.emit('distance', distance);
+            console.log('[Socket] status requested');
+            this.control.ready().then(function () {
+                _this4.control.status().then(function (status) {
+                    console.log('[Socket] is primed', status);
+                    _this4.socket.emit('status', status);
+                });
+            });
+        }
+    }, {
+        key: 'prime',
+        value: function prime() {
+            var _this5 = this;
+
+            console.log('[Socket] prime');
+            this.control.ready().then(function () {
+                _this5.socket.emit('priming');
+                _this5.control.prime().then(function (pos) {
+                    _this5.socket.emit('primed', pos);
+                    _this5.socket.emit('distance', pos);
+                    _this5.socket.broadcast.emit('distance', pos);
+                }, function () {
+                    _this5.socket.emit('primed');
+                });
+            });
+        }
+    }, {
+        key: 'readDistance',
+        value: function readDistance() {
+            var _this6 = this;
+
+            this.control.ready().then(function () {
+                _this6.control.readDistance().then(function (distance) {
+                    console.log('[Socket] current position', distance);
+                    _this6.socket.emit('distance', distance);
+                });
             });
         }
     }]);

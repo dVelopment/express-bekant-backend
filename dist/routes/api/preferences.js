@@ -14,6 +14,10 @@ var _libPreferencesManager = require('../../lib/preferencesManager');
 
 var _libPreferencesManager2 = _interopRequireDefault(_libPreferencesManager);
 
+var _lodash = require('lodash');
+
+var _lodash2 = _interopRequireDefault(_lodash);
+
 var router = _express2['default'].Router();
 var manager = (0, _libPreferencesManager2['default'])();
 
@@ -26,7 +30,7 @@ router.get('/', function (req, res) {
 });
 
 router.post('/', function (req, res) {
-    var preference = manager.createPreference(req.body.label, req.body.height, req.user);
+    var preference = manager.createPreference(req.body.label, req.body.position, req.user);
 
     manager.savePreference(preference).then(function (p) {
         res.json(p);
@@ -41,9 +45,29 @@ router.get('/:id', function (req, res) {
     });
 });
 
+router['delete']('/:id', function (req, res) {
+    manager.findById(req.params.id, req.user).then(function (pref) {
+        manager.removePreference(pref).then(function () {
+            res.sendStatus(204);
+        });
+    }, function () {
+        res.sendStatus(404);
+    });
+});
+
 router.put('/:id', function (req, res) {
     manager.findById(req.params.id, req.user).then(function (pref) {
-        pref = _.extend(pref, req.body);
+        // do not allow overriding user id
+        var data = _lodash2['default'].extend({}, req.body);
+        delete data.userId;
+
+        _lodash2['default'].forEach(_lodash2['default'].keys(data), function (key) {
+            if (/^\$/.test(key)) {
+                delete data[key];
+            }
+        });
+
+        pref = _lodash2['default'].extend(pref, data);
         manager.savePreference(pref).then(function (p) {
             res.json(p);
         }, function (err) {

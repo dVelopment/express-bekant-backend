@@ -41,19 +41,30 @@ var PreferencesManager = (function () {
 
     _createClass(PreferencesManager, [{
         key: 'createPreference',
-        value: function createPreference(label, height, user) {
+        value: function createPreference(label, position, user) {
             var pref = new _modelPreference2['default']({
                 label: label,
-                height: height
+                position: position
             });
             pref.setUser(user);
 
             return pref;
         }
     }, {
+        key: 'removePreference',
+        value: function removePreference(preference) {
+            var _this = this;
+
+            return new Promise(function (resolve, reject) {
+                _this.getCollection().then(function (collection) {
+                    collection.remove({ _id: preference._id }).then(resolve, reject);
+                });
+            });
+        }
+    }, {
         key: 'savePreference',
         value: function savePreference(preference) {
-            var _this = this;
+            var _this2 = this;
 
             return new Promise(function (resolve, reject) {
                 var data = _lodash2['default'].assign({}, preference);
@@ -72,10 +83,10 @@ var PreferencesManager = (function () {
                     reject(err);
                 }
 
-                _this.getCollection().then(function (collection) {
+                _this2.getCollection().then(function (collection) {
                     var promise = undefined;
                     if (preference._id) {
-                        promise = collection.udate({ _id: preference._id }, { $set: data });
+                        promise = collection.update({ _id: preference._id }, { $set: data });
                     } else {
                         promise = collection.insert(data);
                     }
@@ -87,30 +98,36 @@ var PreferencesManager = (function () {
     }, {
         key: 'findById',
         value: function findById(id, user) {
-            var _this2 = this;
+            var _this3 = this;
 
             return new Promise(function (resolve, reject) {
-                _this2.getCollection().then(function (collection) {
-                    collection.findOne({ _id: new _mongodb.ObjectID(id), userId: user._id }).then(function (data) {
+                _this3.getCollection().then(function (collection) {
+                    console.log('[PreferencesManager] collection loaded');
+                    var params = { _id: new _mongodb.ObjectID(id), userId: user._id };
+
+                    console.log('[PreferencesManager] findById params', params);
+                    collection.findOne(params).then(function (data) {
+                        console.log('[PreferencesManager] preference loaded', data);
                         if (data) {
                             resolve(new _modelPreference2['default'](data));
                         } else {
                             reject('invalid preference id');
                         }
                     }, function (err) {
+                        console.log('[PreferencesManager] error loading preference', err);
                         reject(err);
                     });
-                });
+                }, reject);
             });
         }
     }, {
         key: 'findByUser',
         value: function findByUser(user) {
-            var _this3 = this;
+            var _this4 = this;
 
             console.log('[PreferencesManager] find by user', user);
             return new Promise(function (resolve, reject) {
-                _this3.getCollection().then(function (collection) {
+                _this4.getCollection().then(function (collection) {
                     console.log('[PreferencesManager] collection loaded');
                     var result = [];
                     collection.find({ userId: user._id }).each(function (err, doc) {
@@ -129,11 +146,16 @@ var PreferencesManager = (function () {
     }, {
         key: 'getCollection',
         value: function getCollection() {
-            var _this4 = this;
+            var _this5 = this;
 
-            return this.db.ready().then(function () {
-                console.log('[PreferencesManager] db ready');
-                return _this4.db.getCollection('preferences');
+            return new Promise(function (resolve, reject) {
+                _this5.db.ready().then(function () {
+                    console.log('[PreferencesManager] db ready');
+                    resolve(_this5.db.getCollection('preferences'));
+                }, function (err) {
+                    console.log('[PreferencesManager] error waiting on db', err);
+                    reject(err);
+                });
             });
         }
     }]);

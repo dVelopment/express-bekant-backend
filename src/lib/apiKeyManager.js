@@ -70,8 +70,6 @@ class ApiKeyManager {
         let expires = moment();
         expires.add(EXPIRES_SPAN, 'days');
 
-        apiKey.createApiKey();
-
         apiKey.expires = expires.toDate();
 
         return this.saveApiKey(apiKey);
@@ -84,7 +82,7 @@ class ApiKeyManager {
 
         return this.getCollection().then((collection) => {
             return collection.findOne({
-                userId: new ObjectID(userId), expires: {
+                userId: new ObjectID(userId.toString()), expires: {
                     $gt: now
                 }
             }, {sort: [['expires', 'desc']]}).then((data) => {

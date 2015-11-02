@@ -28,7 +28,8 @@ var DataBase = (function () {
         _classCallCheck(this, DataBase);
 
         this[PROMISE] = new Promise(function (resolve) {
-            _mongodb.MongoClient.connect('mongodb://' + config.host + ':{$config.port}/' + config.db, function (err, conn) {
+            var url = 'mongodb://' + config.host + ':' + config.port + '/' + config.db;
+            _mongodb.MongoClient.connect(url, function (err, conn) {
                 if (err) {
                     throw err;
                 }

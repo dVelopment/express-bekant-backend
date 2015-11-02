@@ -44,7 +44,7 @@ function setupApiKeyAuthentication() {
     let LocalAPIKeyStrategy = require('passport-localapikey').Strategy;
 
     passport.use(new LocalAPIKeyStrategy({
-            apiKeyHeader: 'X-Api-Key'
+            apiKeyHeader: 'x-api-key'
         },
         (apiKey, done) => {
             console.log('[authenticate] authenticate api key', apiKey);
@@ -114,11 +114,13 @@ function setupLocalAuthentication() {
             user.provider = 'local';
 
             userManager.saveUser(user).then((user) => {
+                console.log('[signup]user saved', user);
                 if (!req.isAuthenticated()) {
                     req.login(user, (err) => {
                         if (err) {
-                            console.log('err', err);
+                            console.log('error signing up', err, err.stack);
                             res.sendStatus(500);
+                            throw err;
                         } else {
                             success(user);
                         }

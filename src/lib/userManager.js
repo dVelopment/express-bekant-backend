@@ -89,7 +89,7 @@ class UserManager {
         return new Promise((resolve, reject) => {
             this.getCollection()
                 .then((collection) => {
-                    collection.findOne({_id: new ObjectID(id)})
+                    collection.findOne({_id: new ObjectID(id.toString())})
                         .then((data) => {
                             if (data) {
                                 resolve(new User(data));

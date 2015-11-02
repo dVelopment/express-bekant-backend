@@ -53,6 +53,9 @@ app.use(express['static'](path.join(__dirname, 'public')));
 _libAuthentication2['default'].init(app);
 app.use('/auth', _libAuthentication2['default'].router);
 
+// static files
+app.use('/', express['static']('./frontend/www'));
+
 // setup routes
 (0, _libRouter2['default'])(app);
 

@@ -30,13 +30,17 @@ var _cleanup = require('./cleanup');
 
 var _cleanup2 = _interopRequireDefault(_cleanup);
 
+var _request2 = require('request');
+
+var _request3 = _interopRequireDefault(_request2);
+
 var config = _settings2['default'].get('desk');
 
-var Control = (function () {
-    function Control(sensor, config) {
+var DirectControl = (function () {
+    function DirectControl(sensor, config) {
         var _this = this;
 
-        _classCallCheck(this, Control);
+        _classCallCheck(this, DirectControl);
 
         this.sensor = sensor;
         this.config = config;
@@ -53,7 +57,7 @@ var Control = (function () {
         });
     }
 
-    _createClass(Control, [{
+    _createClass(DirectControl, [{
         key: 'ready',
         value: function ready() {
             return this.promise;
@@ -117,10 +121,120 @@ var Control = (function () {
         }
     }]);
 
-    return Control;
+    return DirectControl;
 })();
 
-var control = new Control(_sensor2['default'], config);
+var HttpControl = (function () {
+    function HttpControl(config) {
+        _classCallCheck(this, HttpControl);
+
+        this.config = config;
+        this.url = 'http://' + (config.host || '127.0.0.1') + ':' + (config.port || 8080) + '/' + (config.path || '').replace(/^\//, '');
+
+        this.promise = new Promise(function (resolve) {
+            resolve();
+        });
+    }
+
+    _createClass(HttpControl, [{
+        key: 'ready',
+        value: function ready() {
+            return this.promise;
+        }
+    }, {
+        key: 'readDistance',
+        value: function readDistance() {
+            if (this.reading) {
+                return this.reading;
+            }
+
+            this.reading = this.request('position').then(function (data) {
+                return data.Position;
+            });
+
+            return this.reading;
+        }
+    }, {
+        key: 'stop',
+        value: function stop() {
+            return this.request('stop', 'POST').then(function (data) {
+                return data.Position;
+            });
+        }
+    }, {
+        key: 'move',
+        value: function move(direction) {
+            return this.request('move/' + direction, 'POST');
+        }
+    }, {
+        key: 'up',
+        value: function up() {
+            return this.move('up');
+        }
+    }, {
+        key: 'down',
+        value: function down() {
+            return this.move('down');
+        }
+    }, {
+        key: 'request',
+        value: function request(path) {
+            var _this6 = this;
+
+            var method = arguments.length <= 1 || arguments[1] === undefined ? 'GET' : arguments[1];
+
+            return new Promise(function (resolve, reject) {
+                (0, _request3['default'])({
+                    url: _this6.url + path,
+                    method: method
+                }, function (err, response, body) {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(JSON.parse(body));
+                    }
+                });
+            });
+        }
+    }, {
+        key: 'goTo',
+        value: function goTo(position) {
+            return this.request('go/' + position, 'POST').then(function (data) {
+                return data.Position;
+            });
+        }
+    }, {
+        key: 'prime',
+        value: function prime() {
+            return this.request('prime', 'POST').then(function (data) {
+                return data.Position;
+            });
+        }
+    }, {
+        key: 'status',
+        value: function status() {
+            return this.request('status').then(function (data) {
+                return data.IsPrimed;
+            });
+        }
+    }]);
+
+    return HttpControl;
+})();
+
+var control = undefined;
+
+switch (config.type) {
+    default:
+        throw new Error('unknown control type: "' + config.type + '"');
+        break;
+    case 'direct':
+        control = new DirectControl(_sensor2['default'], config);
+        break;
+    case 'http':
+        control = new HttpControl(config.config);
+        break;
+}
 
 exports['default'] = control;
 module.exports = exports['default'];
