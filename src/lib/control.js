@@ -95,7 +95,10 @@ class HttpControl {
         }
 
         this.reading = this.request('position')
-            .then((data) => data.Position);
+            .then((data) => {
+                this.reading = null;
+                return data.Position;
+            });
 
         return this.reading;
     }

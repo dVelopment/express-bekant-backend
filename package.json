@@ -40,7 +40,8 @@
     "r-pi-gpio": "^3.0.0",
     "r-pi-usonic": "^2.5.0",
     "serve-favicon": "~2.3.0",
-    "socket.io": "^1.3.7"
+    "socket.io": "^1.3.7",
+    "temp": "^0.8.3"
   },
   "devDependencies": {
     "gulp": "^3.9.0",

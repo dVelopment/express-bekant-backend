@@ -7,7 +7,6 @@ import settings from './settings';
 import cookieParser from 'cookie-parser';
 import _ from 'lodash';
 import Socket from './socket';
-import app from '../app';
 
 let io, promise;
 

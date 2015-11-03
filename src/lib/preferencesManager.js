@@ -15,6 +15,9 @@ class PreferencesManager {
             collection.createIndex({
                 userId: 1
             });
+            collection.createIndex({
+                position: 1
+            });
         });
     }
 
@@ -78,7 +81,6 @@ class PreferencesManager {
                     console.log('[PreferencesManager] findById params', params);
                     collection.findOne(params)
                         .then((data) => {
-                            console.log('[PreferencesManager] preference loaded', data);
                             if (data) {
                                 resolve(new Preference(data));
                             } else {
@@ -104,6 +106,25 @@ class PreferencesManager {
                             reject(err);
                         } else if (doc != null) {
                             console.log('[PreferencesManager] data loaded', doc);
+                            result.push(new Preference(doc));
+                        } else {
+                            resolve(result);
+                        }
+                    });
+                });
+        });
+    }
+
+    findAll(ascending = true) {
+        console.log('[PreferencesManager] find all', ascending ? 'ascending': 'descending');
+        return new Promise((resolve, reject) => {
+            this.getCollection()
+                .then((collection) => {
+                    let result = [];
+                    collection.find({}).sort({position: ascending ? 1 : -1}).each((err, doc) => {
+                        if (err) {
+                            reject(err);
+                        } else if (doc != null) {
                             result.push(new Preference(doc));
                         } else {
                             resolve(result);

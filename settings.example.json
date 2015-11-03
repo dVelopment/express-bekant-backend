@@ -11,14 +11,31 @@
     "session": {
         "secret": "my_secret"
     },
+    "server": {
+        "host": "0.0.0.0",
+        "port": 3000,
+        "name": "BekantPi"
+    },
     "authentication": {
         "providers": {
             "local": true
         }
     },
-    "server": {
-        "host": "0.0.0.0",
-        "port": 3000,
-        "name": "Bekant"
+    "sensor": {
+        "type": "http",
+        "config": {
+            "host": "127.0.0.1",
+            "port": 8081,
+            "path": "/distance"
+        }
+    },
+    "desk": {
+        "type": "http",
+        "config": {
+            "host": "127.0.0.1",
+            "port": 8081,
+            "path": "/",
+            "secret": "my_s3cr3t"
+        }
     }
 }

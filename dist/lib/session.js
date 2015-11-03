@@ -29,7 +29,9 @@ var store = new RedisStore({
 exports['default'] = {
     session: (0, _expressSession2['default'])({
         store: store,
-        secret: _settings2['default'].get('session').secret
+        secret: _settings2['default'].get('session').secret,
+        resave: false,
+        saveUninitialized: false
     }),
     store: store
 };

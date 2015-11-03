@@ -18,6 +18,10 @@ var _libAuthentication = require('../lib/authentication');
 
 var _libAuthentication2 = _interopRequireDefault(_libAuthentication);
 
+var _desk = require('./desk');
+
+var _desk2 = _interopRequireDefault(_desk);
+
 var router = _express2['default'].Router();
 
 router.post('/ping', function (reg, res) {
@@ -25,6 +29,7 @@ router.post('/ping', function (reg, res) {
 });
 
 router.use('/api', _libAuthentication2['default'].auth, _api2['default']);
+router.use('/desk', _desk2['default']);
 
 exports['default'] = router;
 module.exports = exports['default'];

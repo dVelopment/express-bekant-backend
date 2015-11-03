@@ -15,7 +15,9 @@ let store = new RedisStore({
 export default {
     session: session({
         store: store,
-        secret: settings.get('session').secret
+        secret: settings.get('session').secret,
+        resave: false,
+        saveUninitialized: false
     }),
     store: store
 };

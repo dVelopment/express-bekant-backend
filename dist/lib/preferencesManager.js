@@ -36,6 +36,9 @@ var PreferencesManager = (function () {
             collection.createIndex({
                 userId: 1
             });
+            collection.createIndex({
+                position: 1
+            });
         });
     }
 
@@ -107,7 +110,6 @@ var PreferencesManager = (function () {
 
                     console.log('[PreferencesManager] findById params', params);
                     collection.findOne(params).then(function (data) {
-                        console.log('[PreferencesManager] preference loaded', data);
                         if (data) {
                             resolve(new _modelPreference2['default'](data));
                         } else {
@@ -144,14 +146,37 @@ var PreferencesManager = (function () {
             });
         }
     }, {
-        key: 'getCollection',
-        value: function getCollection() {
+        key: 'findAll',
+        value: function findAll() {
             var _this5 = this;
 
+            var ascending = arguments.length <= 0 || arguments[0] === undefined ? true : arguments[0];
+
+            console.log('[PreferencesManager] find all', ascending ? 'ascending' : 'descending');
             return new Promise(function (resolve, reject) {
-                _this5.db.ready().then(function () {
+                _this5.getCollection().then(function (collection) {
+                    var result = [];
+                    collection.find({}).sort({ position: ascending ? 1 : -1 }).each(function (err, doc) {
+                        if (err) {
+                            reject(err);
+                        } else if (doc != null) {
+                            result.push(new _modelPreference2['default'](doc));
+                        } else {
+                            resolve(result);
+                        }
+                    });
+                });
+            });
+        }
+    }, {
+        key: 'getCollection',
+        value: function getCollection() {
+            var _this6 = this;
+
+            return new Promise(function (resolve, reject) {
+                _this6.db.ready().then(function () {
                     console.log('[PreferencesManager] db ready');
-                    resolve(_this5.db.getCollection('preferences'));
+                    resolve(_this6.db.getCollection('preferences'));
                 }, function (err) {
                     console.log('[PreferencesManager] error waiting on db', err);
                     reject(err);
