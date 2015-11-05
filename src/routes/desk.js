@@ -43,41 +43,62 @@ router.post('/stopped', (req, res) => {
     res.sendStatus(200);
 });
 
+let movingTarget;
+
 router.post('/preferences/:direction(up|down)', (req, res) => {
     console.log('[Desk] preferences', req.params.direction);
     res.sendStatus(200);
     let promises = [];
 
     // load all preferences
-    promises.push(manager.findAll(req.params.direction === 'up'));
+    let goUp = req.params.direction === 'up';
+    promises.push(manager.findAll(goUp));
 
-    promises.push(control.ready().then(() => control.readDistance()));
+    if (movingTarget) {
+        promises.push(new Promise((resolve) => resolve(movingTarget)));
+    } else {
+        promises.push(control.ready().then(() => control.readDistance()));
+    }
+
 
     Promise.all(promises).then((results) => {
         let [preferences, position] = results;
         console.log('position', position);
+        movingTarget = null;
 
         if (preferences.length < 2) {
             return;
         }
 
-        // get a copy, sorted by distance to current position
-        let sorted = _.sortBy(preferences, (p) => Math.abs(p.position - position));
+        let filter;
 
-        // nearest position is on first index now
-        let currentPos = sorted[0];
+        console.log('positions', _.map(preferences, (p) => p.position));
 
-        let idx = _.findIndex(preferences, (p) => p._id === currentPos._id);
+        // filter out positions that are in the wrong direction
+        if (goUp) {
+            filter = (p) => p.position > position + 1;
+        } else {
+            filter = (p) => p.position < position - 1;
+        }
 
-        let nextIdx = (idx + 1) % preferences.length;
-        let targetPos = preferences[nextIdx];
+        let filtered = _.filter(preferences, filter);
+        console.log('filtered', _.map(filtered, (p) => p.position));
 
-        // we know the target now. let's determine the actual direction
-        let delta = targetPos.position - position;
-        let direction = delta > 0 ? 'down' : 'up';
+        // first matching position (if any)
+        // is now on first index
+        if (preferences.length < 1) {
+            return;
+        }
+
+        let targetPos = filtered[0];
+
+        let direction = goUp ? 'up' : 'down';
         Io.io().then((io) => {
             io.sockets.emit('moving', direction);
         });
+
+        // remember that we're moving
+        movingTarget = targetPos.position;
 
         console.log('target', targetPos.position);
 
@@ -87,7 +108,11 @@ router.post('/preferences/:direction(up|down)', (req, res) => {
             control.goTo(targetPos.position)
                 .then((pos) => {
                     io.sockets.emit('stopped', pos);
+                    movingTarget = null;
                 });
+
+            // clean up after 20seconds
+            setTimeout(() => movingTarget = null, 20000);
         });
     }, (err) => {
         console.log('err', err);
