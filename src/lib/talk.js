@@ -14,6 +14,10 @@ function talk(position, language = 'de', cb) {
         language = 'de';
     }
 
+    if (typeof cb !== 'function') {
+        cb = function() {};
+    }
+
     let audioFile = path.join(dir, position.label + '.mp3');
 
     let stat = fs.statSync(audioFile);

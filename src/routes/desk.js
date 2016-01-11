@@ -103,17 +103,17 @@ router.post('/preferences/:direction(up|down)', (req, res) => {
         console.log('target', targetPos.position);
 
         // announce target
-        talk(targetPos, () => {
-            // start moving
-            control.goTo(targetPos.position)
-                .then((pos) => {
-                    io.sockets.emit('stopped', pos);
-                    movingTarget = null;
-                });
+        talk(targetPos);
 
-            // clean up after 20seconds
-            setTimeout(() => movingTarget = null, 20000);
-        });
+        // start moving
+        control.goTo(targetPos.position)
+            .then((pos) => {
+                io.sockets.emit('stopped', pos);
+                movingTarget = null;
+            });
+
+        // clean up after 20seconds
+        setTimeout(() => movingTarget = null, 20000);
     }, (err) => {
         console.log('err', err);
     });
